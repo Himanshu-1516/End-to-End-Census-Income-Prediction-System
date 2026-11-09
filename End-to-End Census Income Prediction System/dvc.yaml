@@ -1,0 +1,71 @@
+stages:
+  clean_data:
+    cmd: >-
+      python -m src.clean_data.clean_data
+      --raw_data ${clean_data.raw_data}
+      --clean_data ${clean_data.clean_data}
+    deps:
+    - ${clean_data.raw_data}
+    - src/clean_data
+    outs:
+    - ${clean_data.clean_data}
+  check_data:
+    cmd: pytest src/check_data/ -vv --data_path ${clean_data.clean_data}
+    deps:
+    - ${clean_data.clean_data}
+    - src/check_data
+    - src/conftest.py
+    - src/constants.py
+  split_data:
+    cmd: >-
+      python -m src.split_data.split_data
+      --clean_data ${clean_data.clean_data}
+      --split_random_state ${split_data.split_random_state}
+      --split_test_size ${split_data.split_test_size}
+      --split_train ${split_data.split_train}
+      --split_test ${split_data.split_test}
+    deps:
+    - ${clean_data.clean_data}
+    - src/split_data
+    outs:
+    - ${split_data.split_train}
+    - ${split_data.split_test}
+  train_model:
+    cmd: >-
+      python -m src.train_model.train_model
+      --train_data ${split_data.split_train}
+      --valid_size ${train_model.valid_size}
+      --valid_random_state ${train_model.valid_random_state}
+      --model_random_state ${train_model.model_random_state}
+      --model ${train_model.model_path}
+    deps:
+    - ${split_data.split_train}
+    - src/train_model
+    - src/constants.py
+    outs:
+    - ${train_model.model_path}
+    params:
+    - train_model.valid_size
+    - train_model.valid_random_state
+    - train_model.model_random_state
+  evaluate_model:
+    cmd: >-
+      python -m src.evaluate_model.evaluate_model
+      --model ${train_model.model_path}
+      --test_data ${split_data.split_test}
+      --metrics ${evaluate_model.metrics_folder}
+    deps:
+    - ${split_data.split_test}
+    - ${train_model.model_path}
+    - src/evaluate_model
+    metrics:
+    - ${evaluate_model.metrics_folder}/metrics.json
+    plots:
+    - ${evaluate_model.metrics_folder}/precision_recall_curve.csv:
+        template: smooth
+        x: recalls
+        y: precisions
+    - ${evaluate_model.metrics_folder}/predictions.csv:
+        template: confusion
+        x: predicted
+        y: actual

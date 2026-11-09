@@ -1,0 +1,99 @@
+schema: '2.0'
+stages:
+  clean_data:
+    cmd: python -m src.clean_data.clean_data --raw_data src/data/census.csv --clean_data
+      src/data/census_clean.csv
+    deps:
+    - path: src/clean_data
+      md5: 5d55d7963cd210f9deb3709938d518f0.dir
+      size: 6597
+      nfiles: 6
+    - path: src/data/census.csv
+      md5: 145de00f6e6053d3f7044628f9a5b5ff
+      size: 3974474
+    outs:
+    - path: src/data/census_clean.csv
+      md5: 38efc907adc42e60a4b0ed7bddc4a1b2
+      size: 3541549
+  split_data:
+    cmd: python -m src.split_data.split_data --clean_data src/data/census_clean.csv
+      --split_random_state 48 --split_test_size 0.2 --split_train src/data/train.csv
+      --split_test src/data/test.csv
+    deps:
+    - path: src/data/census_clean.csv
+      md5: 38efc907adc42e60a4b0ed7bddc4a1b2
+      size: 3541549
+    - path: src/split_data
+      md5: 8ca5f49518dce1c866b2206c5a1b6a19.dir
+      size: 4385
+      nfiles: 4
+    outs:
+    - path: src/data/test.csv
+      md5: c9db0e484807efe9b1991f49857f4313
+      size: 708421
+    - path: src/data/train.csv
+      md5: 57aa5d76f0ce31d5ad4089ac18d1f3b4
+      size: 2833283
+  train_model:
+    cmd: python -m src.train_model.train_model --train_data src/data/train.csv --valid_size
+      0.2 --valid_random_state 48 --model_random_state 48 --model src/model/model.joblib
+    deps:
+    - path: src/constants.py
+      md5: dfafbbf5a28ed9b4e7c5f309a6284b58
+      size: 3074
+    - path: src/data/train.csv
+      md5: 57aa5d76f0ce31d5ad4089ac18d1f3b4
+      size: 2833283
+    - path: src/train_model
+      md5: 74f9c693dedb2477a5938b7ddf43f862.dir
+      size: 18023
+      nfiles: 10
+    params:
+      params.yaml:
+        train_model.model_random_state: 48
+        train_model.valid_random_state: 48
+        train_model.valid_size: 0.2
+    outs:
+    - path: src/model/model.joblib
+      md5: 830e0dfd634288a02d9acf8233855dcb
+      size: 183322
+  check_data:
+    cmd: pytest src/check_data/ -vv --data_path src/data/census_clean.csv
+    deps:
+    - path: src/check_data
+      md5: 7bda4908d0133addbcb78c789aa8b435.dir
+      size: 8030
+      nfiles: 4
+    - path: src/conftest.py
+      md5: 91239aa7fbaf06bb923b5c897555eb08
+      size: 5638
+    - path: src/constants.py
+      md5: dfafbbf5a28ed9b4e7c5f309a6284b58
+      size: 3074
+    - path: src/data/census_clean.csv
+      md5: 38efc907adc42e60a4b0ed7bddc4a1b2
+      size: 3541549
+  evaluate_model:
+    cmd: python -m src.evaluate_model.evaluate_model --model src/model/model.joblib
+      --test_data src/data/test.csv --metrics src/metrics
+    deps:
+    - path: src/data/test.csv
+      md5: c9db0e484807efe9b1991f49857f4313
+      size: 708421
+    - path: src/evaluate_model
+      md5: b2709c889c397d2a4950b83ccefb7e8e.dir
+      size: 11064
+      nfiles: 4
+    - path: src/model/model.joblib
+      md5: 830e0dfd634288a02d9acf8233855dcb
+      size: 183322
+    outs:
+    - path: src/metrics/metrics.json
+      md5: 090bb3d5ddf8627e644c5ad145e0bf6d
+      size: 2400
+    - path: src/metrics/precision_recall_curve.csv
+      md5: a996b5d8ce27cf618c9f27c3704cdb1e
+      size: 195777
+    - path: src/metrics/predictions.csv
+      md5: acb71e8b61c0e1a9b26de4c08a312aca
+      size: 39065
